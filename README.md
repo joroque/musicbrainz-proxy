@@ -1,14 +1,16 @@
-# Code Exercise for Backend Engineer
+# musicbrainz-proxy
 
-## Design Goals / Constraints
+Code exercise for Backend Engineer.
 
-- Following "best practices" is not the main focus.
+## Design Constraints
+
+- Simplicity over "best practices", it's an exercise.
 - Everything in a single Python module and no database or persistence layer,
     for simplicity.
 - No Django or full-featured frameworks. Nothing against them, it' just they're
-    overkill for this exercise and I would end up with more boilerplate
+    overkill for the exercise and we would end up with more boilerplate
     code than anything else.
-- `requests` and `hug` are the only third-party libraries to handle HTTP stuff.
+- `requests` and `hug` as the only third-party libraries to handle HTTP stuff.
 
 
 ## Limitations / Known Issues
@@ -46,8 +48,8 @@ An example of this is [The Beatles](https://musicbrainz.org/artist/b10bbbfc-cf9e
 Assuming Docker is installed in the system, just run:
 
 ```shell
-$ docker build -t musicbrainz-proxy .
-$ docker run --rm -ti -p 9999:8000 musicbrainz-proxy
+$ docker build -t musicbrainz-proxy:latest .
+$ docker run --rm -ti -p 9999:8000 musicbrainz-proxy:latest
 ```
 
 The container's port 8000 (development web server) was published to port 9999 on
@@ -64,8 +66,9 @@ A vanilla installation is also available. Most Python versions >3.6 should work
 but it's only been tested with 3.9.1.
 
 ```shell
+$ cd musicbrainz-proxy/
 $ pyenv install 3.9.1
-$ pyenv virtualenv 3.9.1 bmat
-$ pyenv local bmat  # active environment
+$ pyenv virtualenv 3.9.1 musicbrainz
+$ pyenv local musicbrainz  # active environment
 $ pip install -r requirements.txt
 ```

@@ -60,6 +60,8 @@ class ReleaseGroupApiResponse:
 
 
 class MusicBrainzClient:
+    """MusicBrainz HTTP API wrapper."""
+
     BASE_API_URL = "https://musicbrainz.org/ws/2"
 
     def __init__(self):
@@ -158,7 +160,12 @@ def albums(mbid: hug.types.text, limit: int = 50, offset: int = 0):
     try:
         releases = MusicBrainzClient().get_releases(mbid)
     except MusicBrainzException as exc:
-        raise HTTPServiceUnavailable from exc
+        raise HTTPServiceUnavailable(
+            description=(
+                "Sorry, we must have hit MusicBrainz's quota. "
+                "Please try again in a minute after it resets."
+            )
+        ) from exc
 
     # 2. Iterate once through the releases to group them by release-group
     release_groups_by_id = {}
