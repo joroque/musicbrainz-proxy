@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 import hug
 import requests
+from falcon import HTTPServiceUnavailable
 
 
 logger = logging.getLogger(__name__)
@@ -154,7 +155,12 @@ def albums(mbid: hug.types.text, limit: int = 50, offset: int = 0):
     as 'album'. A 'release' is an instance of a 'release group' you can buy as
     CD or vinyl. 
     """
-    releases = get_releases(mbid)
+    try:
+        releases = get_releases(mbid)
+    except MusicBrainzException as exc:
+        logger.error("Cannot fetch releases for %s", mbid)
+        raise HTTPServiceUnavailable from exc
+    
     release_groups = []
     release_groups_by_id = {}
     
