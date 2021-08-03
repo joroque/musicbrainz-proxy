@@ -17,7 +17,7 @@ Code exercise for Backend Engineer.
 
 ### Docker (Recommended)
 
-Assuming Docker is installed in the system, just run:
+Assuming Docker is installed in the system, clone this repository and run:
 
 ```shell
 pushd musicbrainz-proxy; docker build -t musicbrainz-proxy:latest . && docker run --rm -ti -p 9999:8000 musicbrainz-proxy:latest; popd
