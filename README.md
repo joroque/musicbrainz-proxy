@@ -1,6 +1,6 @@
 # Code Exercise for Backend Engineer
 
-## Design Constraints/Goals
+## Design Goals / Constraints
 
 - Following "best practices" is not the main focus.
 - Everything in a single Python module and no database or persistence layer,
@@ -29,6 +29,15 @@ None of the options above seems ideal. At least by fetching all releases and the
 release group in batch before grouping, we can handle artists whose collection of
 releases can be fetched before the request limit is hit.
 
+It's possible that artists with massive collections call for a different approach.
+An example of this is [The Beatles](https://musicbrainz.org/artist/b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d):
+
+```shell
+> curl --request GET \
+> --url 'http://127.0.0.1:9999/albums/?mbid=b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d'
+{"errors": {"503 Service Unavailable": null}}
+```
+
 
 ## Installation
 
@@ -46,13 +55,13 @@ the Docker host. To access the endpoint from your terminal run:
 
 ```bash
 curl --request GET \
---url 'http://192.168.122.239:9999/albums/?mbid=f6beac20-5dfe-4d1f-ae02-0b0a740aafd6&offset=4&limit=37'
+--url 'http://127.0.0.1:9999/albums/?mbid=f6beac20-5dfe-4d1f-ae02-0b0a740aafd6&offset=4&limit=37'
 ```
 
 ### pyenv + virtualenv
 
-A vanilla Python installation is also available. Most Python versions >3.6 should
-work but it's only been tested with 3.9.1.
+A vanilla installation is also available. Most Python versions >3.6 should work
+but it's only been tested with 3.9.1.
 
 ```shell
 $ pyenv install 3.9.1
