@@ -72,7 +72,7 @@ class MusicBrainzClient:
             # handling other (hypothetical) requests that don't need to make any
             # API calls.
             logger.info("HTTP GET to %s", url)
-            response = self.client.get(url, timeout=10)
+            response = self.client.get(url, timeout=3)
             response.raise_for_status()
             response_data = response.json()
         except (requests.RequestException, ValueError):
@@ -102,11 +102,15 @@ class MusicBrainzClient:
         # Make this first request, the total number of releases can be found there
         limit = 100
         offset = 0
-        response = self.browse_releases(artist_mbid, limit, offset)
+        try:
+            response = self.browse_releases(artist_mbid, limit, offset)
+        except MusicBrainzException:
+            logger.exception("Could not fetch all releases for %s", artist_mbid)
+            raise
+            
         releases.extend(response.releases)
-        
-        offset += limit
         total_releases = response.total_items
+        offset += limit
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             pages = [
@@ -118,8 +122,8 @@ class MusicBrainzClient:
                     response = future.result()
                     releases.extend(response.releases)
                 except MusicBrainzException:
-                    logger.exception("Could not fetch all the releases for %s", artist_mbid)
-                    releases = []
+                    logger.exception("Could not fetch all releases for %s", artist_mbid)
+                    raise
 
         return releases
 
@@ -134,21 +138,18 @@ def albums(mbid: hug.types.text, limit: int = 50, offset: int = 0):
     as 'album'. A 'release' is an instance of a 'release group' you can buy as
     CD, vinyl, etc.
     """
-    api_client = MusicBrainzClient()
-    
+    # 1. Fetch all the releases
     try:
-        releases = api_client.get_releases(mbid)
+        releases = MusicBrainzClient().get_releases(mbid)
     except MusicBrainzException as exc:
-        logger.error("Cannot fetch releases for %s", mbid)
         raise HTTPServiceUnavailable from exc
     
-    release_groups = []
+    # 2. Iterate through the release once to start grouping them by release-group
     release_groups_by_id = {}
-    
-    # Iterate through the whole list of release only once 
-    for release_data in releases:
-            release_group_id = release_data["release-group"]["id"]
-            release_group_name = release_data["release-group"]["title"]
+    release_groups = []
+    for _release in releases:
+            release_group_id = _release["release-group"]["id"]
+            release_group_name = _release["release-group"]["title"]
             release_groups_by_id[release_group_id] = {
                 "mbid": release_group_id,
                 "name": release_group_name,
@@ -157,7 +158,7 @@ def albums(mbid: hug.types.text, limit: int = 50, offset: int = 0):
             }
             release_groups.append(release_group_id)
 
-    # No point to continue if no release groups are collected
+    # No point in continuing if there are no release groups
     if not release_groups:
         return {"albums": []}
     
