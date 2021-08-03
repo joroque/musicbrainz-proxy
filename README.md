@@ -13,6 +13,67 @@ Code exercise for Backend Engineer.
 - `requests` and `hug` as the only third-party libraries to handle HTTP stuff.
 
 
+## Installation
+
+### Docker (Recommended)
+
+Assuming Docker is installed in the system, just run:
+
+```shell
+$ cd musicbrainz-proxy/
+$ docker build -t musicbrainz-proxy:latest .
+$ docker run --rm -ti -p 9999:8000 musicbrainz-proxy:latest
+```
+
+The container's port `8000` is published to port `9999` on the Docker host. To access
+the endpoint from your terminal run:
+
+```bash
+curl -s --request GET \
+--url 'http://127.0.0.1:9999/albums/?mbid=f6beac20-5dfe-4d1f-ae02-0b0a740aafd6&offset=4&limit=37' | jq
+```
+
+**Output:**
+
+```json
+{
+  "albums": [
+    {
+      "mbid": "5bc030ca-10f1-4d61-bfd2-846873cd9e1b",
+      "name": "Goblin",
+      "year": 2011,
+      "release_count": 5
+    },
+    {
+      "mbid": "c65de046-7a48-4269-b4e5-4db0ed328f47",
+      "name": "CALL ME IF YOU GET LOST",
+      "year": 2021,
+      "release_count": 5
+    },
+    {
+      "mbid": "27881759-88c1-48df-aa72-1ec149f1b5c9",
+      "name": "Bastard",
+      "year": 2009,
+      "release_count": 1
+    }
+  ]
+}
+```
+
+### pyenv + virtualenv
+
+A vanilla installation is also available. Most Python versions >3.6 should work
+but it's only been tested with 3.9.1.
+
+```shell
+$ cd musicbrainz-proxy/
+$ pyenv install 3.9.1
+$ pyenv virtualenv 3.9.1 musicbrainz
+$ pyenv local musicbrainz
+$ pip install -r requirements.txt
+```
+
+
 ## Limitations / Known Issues
 
 The web service is currently limited by MusicBrainz's [rates](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting).
@@ -34,41 +95,17 @@ releases can be fetched before the request limit is hit.
 It's possible that artists with massive collections call for a different approach.
 An example of this is [The Beatles](https://musicbrainz.org/artist/b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d):
 
-```shell
-> curl --request GET \
-> --url 'http://127.0.0.1:9999/albums/?mbid=b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d'
-{"errors": {"503 Service Unavailable": null}}
-```
-
-
-## Installation
-
-### Docker (Recommended)
-
-Assuming Docker is installed in the system, just run:
-
-```shell
-$ docker build -t musicbrainz-proxy:latest .
-$ docker run --rm -ti -p 9999:8000 musicbrainz-proxy:latest
-```
-
-The container's port 8000 (development web server) was published to port 9999 on
-the Docker host. To access the endpoint from your terminal run:
-
 ```bash
-curl --request GET \
---url 'http://127.0.0.1:9999/albums/?mbid=f6beac20-5dfe-4d1f-ae02-0b0a740aafd6&offset=4&limit=37'
+curl -s --request GET \
+--url 'http://127.0.0.1:9999/albums/?mbid=b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d' | jq
 ```
 
-### pyenv + virtualenv
+**Output:**
 
-A vanilla installation is also available. Most Python versions >3.6 should work
-but it's only been tested with 3.9.1.
-
-```shell
-$ cd musicbrainz-proxy/
-$ pyenv install 3.9.1
-$ pyenv virtualenv 3.9.1 musicbrainz
-$ pyenv local musicbrainz  # active environment
-$ pip install -r requirements.txt
+```json
+{
+  "errors": {
+    "503 Service Unavailable": "Sorry, we must have hit MusicBrainz's quota. Please try again in a minute after it resets."
+  }
+}
 ```
