@@ -1,4 +1,4 @@
-
+import datetime
 import concurrent.futures
 import logging
 from collections import Counter
@@ -24,8 +24,6 @@ class MusicBrainzException(Exception):
 
 @dataclass
 class ReleaseApiResponse:
-    status_code: int
-    url: str
     response_data: dict
     
     @property
@@ -37,6 +35,28 @@ class ReleaseApiResponse:
         return self.response_data.get("releases", [])
 
 
+@dataclass
+class ReleaseGroupApiResponse:
+    response_data: dict
+
+    @property
+    def mbid(self):
+        return self.response_data.get("id")
+
+    @property
+    def name(self):
+        return self.response_data.get("title")
+
+    @property
+    def year(self):
+        isodate = self.response_data.get("first-release-date")  # e.g. '2011-05-10'
+        try:
+            year = datetime.date.fromisoformat(isodate).year
+        except (TypeError, ValueError):
+            year = None
+        
+        return year
+
 
 class MusicBrainzClient:
     BASE_API_URL = "https://musicbrainz.org/ws/2"
@@ -45,7 +65,7 @@ class MusicBrainzClient:
         self.client = requests.Session()
         self.client.headers.update({
             "Accept": "application/json",
-            "User-Agent": "python-musicbrainz/0.7.3"
+            "User-Agent": "musicbrainz-proxy/1.0.0"
         })
 
     def browse_releases(self, artist_mbid, limit=25, offset=0):
@@ -59,10 +79,9 @@ class MusicBrainzClient:
         > increase that up to 100.
         
         """
-
         url = (
             f"{self.BASE_API_URL}/release/"
-            f"?artist={artist_mbid}&inc=release-groups+artist-credits"
+            f"?artist={artist_mbid}&inc=release-groups&type=album"
             f"&offset={offset}&limit={limit}&fmt=json"
         )
         try:
@@ -71,19 +90,16 @@ class MusicBrainzClient:
             # MusicBrainz to respond when their performance is degraded could be
             # handling other (hypothetical) requests that don't need to make any
             # API calls.
-            logger.info("HTTP GET to %s", url)
             response = self.client.get(url, timeout=3)
             response.raise_for_status()
             response_data = response.json()
         except (requests.RequestException, ValueError):
             logger.exception("HTTP GET to %s failed!", url)
             raise MusicBrainzException
+        else:
+            logger.info("HTTP GET to %s", url)
 
-        return ReleaseApiResponse(
-            status_code=response.status_code,
-            url=url,
-            response_data=response_data
-        )
+        return ReleaseApiResponse(response_data=response_data)
 
     def get_releases(self, artist_mbid):
         """Fetch all the artist's releases.
@@ -148,15 +164,14 @@ def albums(mbid: hug.types.text, limit: int = 50, offset: int = 0):
     release_groups_by_id = {}
     release_groups = []
     for _release in releases:
-            release_group_id = _release["release-group"]["id"]
-            release_group_name = _release["release-group"]["title"]
-            release_groups_by_id[release_group_id] = {
-                "mbid": release_group_id,
-                "name": release_group_name,
-                "year": None,
+            release_group = ReleaseGroupApiResponse(_release["release-group"])
+            release_groups_by_id[release_group.mbid] = {
+                "mbid": release_group.mbid,
+                "name": release_group.name,
+                "year": release_group.year,
                 "release_count": 0,
             }
-            release_groups.append(release_group_id)
+            release_groups.append(release_group.mbid)
 
     # No point in continuing if there are no release groups
     if not release_groups:

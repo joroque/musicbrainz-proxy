@@ -1,29 +1,62 @@
 # Code Exercise for Backend Engineer
 
-## Constraints
+## Design Constraints/Goals
 
 - Following "best practices" is not the main focus.
-- Application in single Python module.
-- `requests` and `hug` as the only third-party libraries to handle HTTP stuff.
-- No Django or any of the most popular frameworks. Nothing against them, it's
-just they're overkill in this case and I would end up with more boilerplate
-code than anything else.
-- No database or persistence layer, for simplicity.
+- Everything in a single Python module and no database or persistence layer,
+    for simplicity.
+- No Django or full-featured frameworks. Nothing against them, it' just they're
+    overkill for this exercise and I would end up with more boilerplate
+    code than anything else.
+- `requests` and `hug` are the only third-party libraries to handle HTTP stuff.
+
+
+## Limitations / Known Issues
+
+The web service is currently limited by MusicBrainz's [rates](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting).
+
+To obtain the number of releases per release-group/album, we have to go through
+all the artist's releases and put each one in its corresponding group. This seems
+to be the method that makes the least amount of API calls in the majority of cases.
+Other approaches require us to know the MusicBrainz IDs in advance to either:
+    a) Make a request to fetch all releases for each release group. Assuming the
+    releases of every release-group fit in a single page/request we'd be making
+    (n + 1) API calls per artist, where n is the number of release-groups; or
+    b) Make a request to fetch the release-group of each release. This is worse
+    than the former.
+
+None of the options above seems ideal. At least by fetching all releases and their
+release group in batch before grouping, we can handle artists whose collection of
+releases can be fetched before the request limit is hit.
+
 
 ## Installation
 
-### Docker
+### Docker (Recommended)
+
+Assuming Docker is installed in the system, just run:
 
 ```shell
+$ docker build -t musicbrainz-proxy .
 $ docker run --rm -ti -p 9999:8000 musicbrainz-proxy
 ```
 
-This will publish the container's port 8000 (development web server)
-to port 9999 on the Docker host.
-
-To access the endpoint from your terminal run:
+The container's port 8000 (development web server) was published to port 9999 on
+the Docker host. To access the endpoint from your terminal run:
 
 ```bash
 curl --request GET \
 --url 'http://192.168.122.239:9999/albums/?mbid=f6beac20-5dfe-4d1f-ae02-0b0a740aafd6&offset=4&limit=37'
+```
+
+### pyenv + virtualenv
+
+A vanilla Python installation is also available. Most Python versions >3.6 should
+work but it's only been tested with 3.9.1.
+
+```shell
+$ pyenv install 3.9.1
+$ pyenv virtualenv 3.9.1 bmat
+$ pyenv local bmat  # active environment
+$ pip install -r requirements.txt
 ```
