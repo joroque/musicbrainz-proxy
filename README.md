@@ -20,9 +20,7 @@ Code exercise for Backend Engineer.
 Assuming Docker is installed in the system, just run:
 
 ```shell
-$ cd musicbrainz-proxy/
-$ docker build -t musicbrainz-proxy:latest .
-$ docker run --rm -ti -p 9999:8000 musicbrainz-proxy:latest
+pushd musicbrainz-proxy; docker build -t musicbrainz-proxy:latest . && docker run --rm -ti -p 9999:8000 musicbrainz-proxy:latest; popd
 ```
 
 The container's port `8000` is published to port `9999` on the Docker host. To access
