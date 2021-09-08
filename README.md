@@ -13,9 +13,55 @@ Code exercise for Backend Engineer.
 - `requests` and `hug` as the only third-party libraries to handle HTTP stuff.
 
 
-## Installation
+## Installation (pyenv + virtualenv)
 
-### Docker (Recommended)
+Any Python versions >3.6 should work but it's only been tested with 3.9.1.
+
+Initialize the environment and install dependencies:
+
+```shell
+$ cd musicbrainz-proxy/
+$ pyenv install 3.9.1
+$ pyenv virtualenv 3.9.1 musicbrainz
+$ pyenv local musicbrainz
+$ pip install -r requirements.dev.txt
+$ pip instsall -e .
+```
+
+This installation assumes Redis is installed and running. Set the related
+environment variables if they are different than the defaults shown below:
+
+```
+$ export REDIS_HOST=127.0.0.1
+$ export REDIS_PORT=6379
+```
+
+Finally, run the web and the task workers:
+
+```
+$ rq worker -u redis://$REDIS_HOST:$REDIS_PORT & hug -f musicbrainz_proxy/app.py
+```
+
+Make a test request for an artist with a huge catalog like [The Beatles](https://musicbrainz.org/artist/b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d):
+
+```bash
+curl -s --request GET \
+--url 'http://127.0.0.1:8000/albums/?mbid=f6beac20-5dfe-4d1f-ae02-0b0a740aafd6&offset=4&limit=37' | jq
+```
+
+**Output:**
+
+```json
+{
+  "result_url": "http://127.0.0.1:8000/albums/result/47486a44-d53d-4f9a-802d-066897eb1c05"
+}
+
+```
+
+# Outdated
+
+
+## Running with Docker (outdated)
 
 Assuming Docker is installed in the system, clone this repository and run:
 
@@ -58,52 +104,3 @@ curl -s --request GET \
 }
 ```
 
-### pyenv + virtualenv
-
-A vanilla installation is also available. Most Python versions >3.6 should work
-but it's only been tested with 3.9.1.
-
-```shell
-$ cd musicbrainz-proxy/
-$ pyenv install 3.9.1
-$ pyenv virtualenv 3.9.1 musicbrainz
-$ pyenv local musicbrainz
-$ pip install -r requirements.txt
-```
-
-
-## Limitations / Known Issues
-
-The web service is currently limited by MusicBrainz's [rates](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting).
-
-To obtain the number of releases per release-group/album, we have to go through
-all the artist's releases and put each one in its corresponding group. This seems
-to be the method that makes the least amount of API calls in the majority of cases.
-Other approaches require us to know the MusicBrainz IDs in advance to either:
-    a) Make a request to fetch all releases for each release group. Assuming the
-    releases of every release-group fit in a single page/request we'd be making
-    (n + 1) API calls per artist, where n is the number of release-groups; or
-    b) Make a request to fetch the release-group of each release. This is worse
-    than the former.
-
-None of the options above seems ideal. At least by fetching all releases and their
-release group in batch before grouping, we can handle artists whose collection of
-releases can be fetched before the request limit is hit.
-
-It's possible that artists with massive collections call for a different approach.
-An example of this is [The Beatles](https://musicbrainz.org/artist/b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d):
-
-```bash
-curl -s --request GET \
---url 'http://127.0.0.1:9999/albums/?mbid=b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d' | jq
-```
-
-**Output:**
-
-```json
-{
-  "errors": {
-    "503 Service Unavailable": "Sorry, we must have hit MusicBrainz's quota. Please try again in a minute after it resets."
-  }
-}
-```
